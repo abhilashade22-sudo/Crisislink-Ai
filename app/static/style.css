@@ -1,0 +1,88 @@
+:root{--navy:#0b1f3a;--navy2:#13305a;--red:#b3261e}
+body{font-family:Georgia,"Times New Roman",serif;background:#f4f6f9;color:#14213d}
+h1,h2,h3,.btn,.nav-link,.badge{font-family:system-ui,sans-serif}
+.topbar{background:var(--navy)}
+.sos{background:var(--red);color:#fff;font:700 1rem system-ui;padding:.5rem 1rem;text-align:center}
+.sos a{color:#fff;font-size:1.25rem}
+.bubble{padding:.6rem .9rem;border-radius:.75rem;margin:.4rem 0;max-width:85%;font-family:system-ui,sans-serif}
+.me{background:var(--navy2);color:#fff;margin-left:auto}
+.bot{background:#fff;border:1px solid #cdd5e0}
+#log{height:55vh;overflow:auto}
+.urgent{border:3px solid var(--red);background:#fff3f2;padding:1rem;font:600 1.1rem system-ui}
+
+.sos-panel {
+  margin: 24px auto;
+  padding: 20px;
+  max-width: 760px;
+  border: 2px solid #c62828;
+  border-radius: 12px;
+  background: #fffafa;
+  color: #222;
+}
+
+.sos-panel h2 {
+  margin-top: 0;
+  color: #b71c1c;
+}
+
+.sos-panel label {
+  display: block;
+  margin-top: 14px;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.sos-panel input,
+.sos-panel select,
+.sos-panel textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #aaa;
+  border-radius: 6px;
+  font: inherit;
+}
+
+.sos-panel button,
+.sos-call-button {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 11px 16px;
+  border: 0;
+  border-radius: 6px;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.sos-call-button {
+  background: #b71c1c;
+  color: white;
+}
+
+.sos-prepare-button {
+  background: #263b80;
+  color: white;
+}
+
+#sos-location-button,
+#sos-copy-button {
+  background: #e8eaf6;
+  color: #1a237e;
+}
+
+#sos-location-status,
+#sos-copy-status {
+  font-size: 0.95rem;
+}
+
+#sos-result {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #ddd;
+}
+
+#sos-result[hidden] {
+  display: none;
+}

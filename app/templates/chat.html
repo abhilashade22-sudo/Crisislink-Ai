@@ -1,0 +1,614 @@
+{% extends "base.html" %}
+{% block body%}
+<section class="sos-panel" id="sos-panel">
+  <h2>Emergency SOS</h2>
+  <p>
+    If someone is in immediate danger in India, call 112.
+    Do not wait for the chatbot.
+  </p>
+
+  <a class="sos-call-button" href="tel:112">
+    📞 Call Emergency Number 112
+  </a>
+
+  <form id="sos-form">
+    <label for="sos-type">Emergency type</label>
+    <select id="sos-type" required>
+      <option value="Medical emergency">Medical emergency</option>
+      <option value="Trouble breathing">Trouble breathing</option>
+      <option value="Unconscious person">Unconscious person</option>
+      <option value="Severe bleeding">Severe bleeding</option>
+      <option value="Fire or smoke">Fire or smoke</option>
+      <option value="Flood">Flood</option>
+      <option value="Trapped person">Trapped person</option>
+      <option value="Accident">Accident</option>
+      <option value="Missing person">Missing person</option>
+      <option value="Other immediate danger">Other immediate danger</option>
+    </select>
+
+    <label for="sos-details">What happened?</label>
+    <textarea
+      id="sos-details"
+      rows="4"
+      maxlength="1000"
+      placeholder="Describe the emergency, injuries, and immediate risks."
+      required
+    ></textarea>
+
+    <label for="sos-location-manual">
+      Location or address (if known)
+    </label>
+    <input
+      id="sos-location-manual"
+      type="text"
+      maxlength="300"
+      placeholder="Building, road, area, city"
+    />
+
+    <button type="button" id="sos-location-button">
+      Get My Location
+    </button>
+    <p id="sos-location-status" role="status">
+      Location has not been requested.
+    </p>
+
+    <button type="submit" class="sos-prepare-button">
+      Prepare SOS Report
+    </button>
+  </form>
+
+  <div id="sos-result" hidden>
+    <h3>Prepared SOS Report</h3>
+    <p>
+      Review the report and share it with emergency responders
+      or a trusted person yourself.
+    </p>
+    <textarea id="sos-report" rows="8" readonly></textarea>
+    <button type="button" id="sos-copy-button">
+      Copy SOS Report
+    </button>
+    <p id="sos-copy-status" role="status"></p>
+    <a class="sos-call-button" href="tel:112">
+      Call 112
+    </a>
+  </div>
+</section>
+ 
+
+<style>
+  .crisis-page {
+    width: 100%;
+    max-width: 850px;
+    margin: 0 auto;
+    padding-bottom: 24px;
+  }
+
+  .crisis-log {
+    max-height: 65vh;
+    overflow-y: auto;
+    padding: 12px;
+    border: 1px solid #dee2e6;
+    border-radius: 12px;
+    background: #f8f9fa;
+    scroll-behavior: smooth;
+  }
+
+  .bubble {
+    padding: 12px 14px;
+    margin: 10px 0;
+    border-radius: 12px;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+  }
+
+  .bubble.bot {
+    background: #fff;
+    border: 1px solid #dee2e6;
+  }
+
+  .bubble.me {
+    background: #e7f1ff;
+    margin-left: 10%;
+    border: 1px solid #cfe2ff;
+  }
+
+  .bubble.urgent {
+    background: #fff0f0;
+    border: 2px solid #dc3545;
+    color: #842029;
+  }
+
+  .bubble h3 {
+    font-size: 1rem;
+    margin-bottom: 8px;
+  }
+
+  .emergency-call {
+    display: block;
+    width: 100%;
+    padding: 13px;
+    margin: 10px 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    text-align: center;
+    color: #fff;
+    background: #c62828;
+    border-radius: 10px;
+    text-decoration: none;
+  }
+
+  .emergency-call:hover {
+    color: #fff;
+    background: #a71d1d;
+  }
+
+  .chat-controls {
+    position: sticky;
+    bottom: 0;
+    background: #fff;
+    padding: 10px 0;
+  }
+
+  .small-note {
+    font-size: 0.88rem;
+    color: #5c636a;
+  }
+
+  @media (max-width: 576px) {
+    .crisis-log {
+      max-height: 60vh;
+      padding: 8px;
+    }
+
+    .bubble {
+      padding: 10px;
+    }
+
+    .bubble.me {
+      margin-left: 4%;
+    }
+
+    .chat-controls input {
+      min-width: 0;
+    }
+  }
+</style>
+
+<div class="crisis-page">
+  <h2>CrisisLink AI</h2>
+
+  <p class="small-note">Emergency Situation Response Assistant</p>
+
+  <div
+    id="log"
+    class="crisis-log"
+    role="log"
+    aria-live="polite"
+    aria-relevant="additions"
+  >
+    <div class="bubble bot">
+      <strong>How can I help?</strong>
+      <br>
+      Briefly describe the emergency to receive clear, practical steps.
+      If anyone is in immediate danger in India, call 112.
+    </div>
+  </div>
+
+  <form id="f" class="chat-controls">
+    <label class="visually-hidden" for="m">
+      Describe the emergency
+    </label>
+
+    <div class="d-flex gap-2">
+      <input
+        id="m"
+        class="form-control"
+        type="text"
+        placeholder="What is happening?"
+        autocomplete="off"
+        maxlength="1000"
+        required
+      >
+
+      <button id="send" class="btn btn-primary" type="submit">
+        Send
+      </button>
+    </div>
+  </form>
+
+  <p class="small-note mt-2">
+    CrisisLink AI does not contact emergency services.
+  </p>
+</div>
+
+<script>
+(() => {
+  const log = document.getElementById("log");
+  const form = document.getElementById("f");
+  const input = document.getElementById("m");
+  const sendButton = document.getElementById("send");
+
+  let requestInProgress = false;
+
+  function addMessage(content, className = "bot") {
+    const element = document.createElement("div");
+    element.className = "bubble " + className;
+    element.textContent = content;
+    log.appendChild(element);
+    log.scrollTop = log.scrollHeight;
+    return element;
+  }
+
+  function addElement(element, className = "bot") {
+    const wrapper = document.createElement("div");
+    wrapper.className = "bubble " + className;
+    wrapper.appendChild(element);
+    log.appendChild(wrapper);
+    log.scrollTop = log.scrollHeight;
+    return wrapper;
+  }
+
+  function addHeading(parent, text) {
+    const heading = document.createElement("h3");
+    heading.textContent = text;
+    parent.appendChild(heading);
+  }
+
+  function addText(parent, text) {
+    const element = document.createElement("p");
+    element.textContent = text;
+    parent.appendChild(element);
+  }
+
+  function addExternalLink(parent, url, label) {
+    try {
+      const parsed = new URL(url, window.location.origin);
+
+      if (parsed.protocol !== "https:") return;
+
+      const link = document.createElement("a");
+      link.href = parsed.href;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = label;
+      parent.appendChild(link);
+    } catch (error) {
+      // Ignore malformed source links.
+    }
+  }
+
+  function cleanAIText(value) {
+    return String(value || "")
+      .replace(/\\([*_.!#-])/g, "$1")
+      .replace(/\*\*/g, "")
+      .trim();
+  }
+
+  function showEmergencyWarning() {
+    const container = document.createElement("div");
+
+    const heading = document.createElement("strong");
+    heading.textContent = "EMERGENCY — Call 112 if in danger";
+    container.appendChild(heading);
+
+    const link = document.createElement("a");
+    link.className = "emergency-call";
+    link.href = "tel:112";
+    link.textContent = "Call 112 now";
+    link.setAttribute("aria-label", "Call emergency number 112");
+    container.appendChild(link);
+
+    addText(
+      container,
+      "This app does not place calls automatically."
+    );
+
+    addElement(container, "urgent");
+  }
+function showSOSAction(data, originalMessage) {
+  const container = document.createElement("div");
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "btn btn-danger mt-2";
+  button.textContent = "Prepare Emergency SOS Report";
+
+  button.addEventListener("click", function () {
+    if (window.prefillCrisisLinkSOS) {
+      window.prefillCrisisLinkSOS(
+        data.predicted_category,
+        originalMessage
+      );
+    }
+
+    const panel = document.getElementById("sos-panel");
+
+    if (panel) {
+      panel.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+    }
+  });
+
+  container.appendChild(button);
+  addElement(container, "urgent");
+ }
+
+
+  // Short fallback responses ensure urgent users get useful steps
+  // even if the AI response is missing or too generic.
+  function getEmergencyFallback(category) {
+    const responses = {
+      "Trapped Person": [
+        "1. Call or shout to someone nearby to unlock the door.",
+        "2. Stay away from windows or balconies unless you can use them safely.",
+        "3. If you cannot get out or feel unsafe, call 112."
+      ].join("\n"),
+
+      "Fire": [
+        "1. Leave the area using a safe exit if possible.",
+        "2. Stay low if there is smoke; do not use lifts.",
+        "3. If trapped or unable to escape safely, call 112."
+      ].join("\n"),
+
+      "Medical Emergency": [
+        "1. Call 112 if the person is seriously ill or injured.",
+        "2. Follow the emergency operator's instructions.",
+        "3. Do not give food or drink to an unconscious person."
+      ].join("\n"),
+
+      "Accident": [
+        "1. Call 112 if anyone is injured or in danger.",
+        "2. Stay away from traffic and other hazards.",
+        "3. Avoid moving an injured person unless danger makes it necessary."
+      ].join("\n"),
+
+      "Flood": [
+        "1. Move to higher ground if you can do so safely.",
+        "2. Stay away from floodwater and electrical hazards.",
+        "3. Call 112 if you are trapped or in immediate danger."
+      ].join("\n"),
+
+      "Crowd Emergency": [
+        "1. Stay upright and move with the crowd rather than pushing against it.",
+        "2. Keep your arms in front of your chest if the crowd is dense.",
+        "3. Move toward an exit when safe and call 112 if in danger."
+      ].join("\n"),
+
+      "Public Safety Threat": [
+        "1. Move away from the threat if you can do so safely.",
+        "2. Avoid confronting the person or approaching suspicious objects.",
+        "3. Call 112 when safe to do so."
+      ].join("\n"),
+
+      "Missing Person": [
+        "1. Contact local police if the person may be in danger.",
+        "2. Share their last known location and time with authorities.",
+        "3. Call 112 if there is immediate danger."
+      ].join("\n")
+    };
+
+    return responses[category] ||
+      "1. Move away from immediate danger if it is safe.\n" +
+      "2. Contact someone nearby who can help.\n" +
+      "3. Call 112 if anyone is in immediate danger.";
+  }
+
+  function showAIResponse(data, urgent) {
+    const responseText = cleanAIText(data.assistant_response);
+
+    const container = document.createElement("div");
+    addHeading(
+      container,
+      urgent ? "What to do now" : "CrisisLink AI"
+    );
+
+    // Use category-specific guidance if an urgent AI response
+    // is missing. Keep the displayed answer short.
+    const finalText = urgent
+      ? (responseText || getEmergencyFallback(data.predicted_category))
+      : (responseText || "Please describe the situation in more detail.");
+
+    const response = document.createElement("div");
+    response.style.whiteSpace = "pre-wrap";
+    response.textContent = finalText;
+    container.appendChild(response);
+
+    addElement(container, urgent ? "urgent" : "bot");
+  }
+
+  // Additional information is shown only for non-urgent messages.
+  function showClassification(data) {
+    const container = document.createElement("div");
+    addHeading(container, "Incident details");
+
+    addText(
+      container,
+      "Likely category: " +
+      (data.predicted_category || "Unclassified")
+    );
+
+    if (data.extracted_location) {
+      addText(container, "Location: " + data.extracted_location);
+    }
+
+    addElement(container);
+  }
+
+  function showVerifiedGuidance(data) {
+    if (!Array.isArray(data.guidance) || data.guidance.length === 0) {
+      return;
+    }
+
+    const container = document.createElement("div");
+    addHeading(container, "Additional safety information");
+
+    data.guidance.slice(0, 1).forEach((item) => {
+      addText(container, item.content || "");
+
+      if (item.source && item.url) {
+        const sourceLabel = document.createElement("span");
+        sourceLabel.textContent = "Source: " + item.source + " — ";
+        container.appendChild(sourceLabel);
+        addExternalLink(container, item.url, "View source");
+      }
+    });
+
+    addElement(container);
+  }
+
+  function showFollowups(data) {
+    if (!Array.isArray(data.followups) || data.followups.length === 0) {
+      return;
+    }
+
+    const container = document.createElement("div");
+    addHeading(container, "One quick question");
+    addText(container, String(data.followups[0]));
+    addElement(container);
+  }
+
+  function showEmergencySummary(data, originalMessage) {
+    const container = document.createElement("div");
+    addHeading(container, "Emergency summary");
+
+    const summaryArea = document.createElement("textarea");
+    summaryArea.className = "form-control";
+    summaryArea.rows = 6;
+    summaryArea.maxLength = 3000;
+    summaryArea.setAttribute("aria-label", "Editable emergency summary");
+
+    summaryArea.value = [
+      "CRISISLINK AI — EMERGENCY SUMMARY",
+      "Emergency type: " + (data.predicted_category || "Unclassified"),
+      "Description: " + originalMessage,
+      "Location: " + (data.extracted_location || "Not provided"),
+      "Not sent to emergency services."
+    ].join("\n");
+
+    container.appendChild(summaryArea);
+
+    const copyButton = document.createElement("button");
+    copyButton.type = "button";
+    copyButton.className = "btn btn-outline-primary mt-2";
+    copyButton.textContent = "Copy summary";
+
+    copyButton.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(summaryArea.value);
+        copyButton.textContent = "Copied";
+      } catch (error) {
+        summaryArea.focus();
+        summaryArea.select();
+        copyButton.textContent = "Select and copy manually";
+      }
+    });
+
+    container.appendChild(copyButton);
+    addElement(container);
+  }
+
+  function showReportLink(data, originalMessage) {
+    const params = new URLSearchParams({
+      category: data.predicted_category || "Other",
+      description: originalMessage,
+      address: data.extracted_location || ""
+    });
+
+    const container = document.createElement("div");
+    const link = document.createElement("a");
+
+    link.className = "btn btn-primary";
+    link.href = "/report?" + params.toString();
+    link.textContent = "Create incident report";
+
+    container.appendChild(link);
+    addElement(container);
+  }
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    if (requestInProgress) return;
+
+    const originalMessage = input.value.trim();
+    if (!originalMessage) return;
+
+    addMessage(originalMessage, "me");
+    input.value = "";
+
+    requestInProgress = true;
+    input.disabled = true;
+    sendButton.disabled = true;
+    sendButton.textContent = "Please wait...";
+
+    const loadingMessage = addMessage(
+      "Checking your message. If there is immediate danger, call 112 now."
+    );
+
+    try {
+      const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+
+      const headers = { "Content-Type": "application/json" };
+      if (csrfMeta && csrfMeta.content) {
+        headers["X-CSRFToken"] = csrfMeta.content;
+      }
+
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ message: originalMessage })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Could not process your message.");
+      }
+
+      loadingMessage.remove();
+
+      const urgent = Boolean(data.urgent);
+
+      
+        if (urgent) {
+         showEmergencyWarning();
+        showAIResponse(data, true);
+        showSOSAction(data, originalMessage);
+
+        // Keep the urgent response focused on immediate safety.
+        } else {
+
+        showAIResponse(data, false);
+        showClassification(data);
+        showVerifiedGuidance(data);
+        showFollowups(data);
+        showEmergencySummary(data, originalMessage);
+        showReportLink(data, originalMessage);
+      }
+
+    } catch (error) {
+      loadingMessage.remove();
+
+      addMessage(
+        "I couldn't process your message. If anyone is in immediate danger in India, call 112 now.",
+        "urgent"
+      );
+
+      console.error("CrisisLink chat error:", error);
+
+    } finally {
+      requestInProgress = false;
+      input.disabled = false;
+      sendButton.disabled = false;
+      sendButton.textContent = "Send";
+      input.focus();
+    }
+  });
+})();
+</script>
+
+<script src="{{ url_for('static', filename='sos.js') }}" defer></script>
+
+{% endblock %}

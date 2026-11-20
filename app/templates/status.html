@@ -1,0 +1,8 @@
+{% extends "base.html" %}{% block body %}
+<h2>Report {{ i.public_id }}</h2>
+<p>Status recorded by this app: <span class="badge bg-primary fs-6">{{ i.status }}</span></p>
+<p class="text-muted">This confirms the report is saved. It does not mean any emergency service has been contacted. Call 112 for emergencies.</p>
+<dl><dt>Category</dt><dd>{{ i.category }}</dd><dt>Description</dt><dd>{{ i.description }}</dd><dt>Location</dt><dd>{{ i.address or 'Not given' }}</dd></dl>
+{% if i.needs_review %}<p><i>Flagged for human review.</i></p>{% endif %}
+<h3 class="h5">Updates</h3>{% for u in ups %}<p>{{ u.created_at.strftime('%d %b %H:%M') }}: {{ u.previous_status }} to {{ u.new_status }}. {{ u.note }}</p>{% else %}<p>No administrator updates yet.</p>{% endfor %}
+{% endblock %}

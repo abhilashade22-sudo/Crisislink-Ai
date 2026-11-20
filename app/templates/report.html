@@ -1,0 +1,19 @@
+{% extends "base.html" %}{% block body %}
+<h2>Incident report</h2>
+<p>Review and edit every field. Submitting saves the report in this app only; <strong>no emergency service is notified</strong>. Call 112 for emergencies.</p>
+<form method="post" class="row g-3"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<div class="col-md-6"><label class="form-label" for="category">Category</label>
+<select id="category" name="category" class="form-select" required>{% for c in cats %}<option {{ 'selected' if p.get('category')==c }}>{{c}}</option>{% endfor %}</select></div>
+<div class="col-md-6"><label class="form-label" for="address">Approximate location</label><input id="address" name="address" class="form-control" value="{{ p.get('address','') }}"></div>
+<div class="col-12"><label class="form-label" for="description">Description</label><textarea id="description" name="description" rows="4" class="form-control" required>{{ p.get('description','') }}</textarea></div>
+<div class="col-md-6"><label class="form-label" for="occurred_at">Date and time</label><input id="occurred_at" type="datetime-local" name="occurred_at" class="form-control"></div>
+<div class="col-md-6"><label class="form-label" for="people">People affected (if known)</label><input id="people" name="people" type="number" min="0" class="form-control"></div>
+<div class="col-12 form-check ms-2"><input class="form-check-input" type="checkbox" name="consent" id="consent"><label class="form-check-label" for="consent">I agree to this information being stored for this demo.</label></div>
+<div class="col-12"><button class="btn btn-primary">Submit report</button></div></form>
+<script>
+// Low-network support: keep an unsent draft in localStorage
+const f=document.querySelector('form'),K='crisislink-draft';
+try{const d=JSON.parse(localStorage.getItem(K)||'{}');if(!location.search)for(const[k,v]of Object.entries(d)){const e=f.elements[k];if(e&&e.type!='checkbox')e.value=v}}catch(e){}
+f.addEventListener('input',()=>{const o={};for(const e of f.elements)if(e.name&&e.name!='csrf_token'&&e.type!='checkbox')o[e.name]=e.value;localStorage.setItem(K,JSON.stringify(o))});
+f.addEventListener('submit',()=>{if(navigator.onLine)localStorage.removeItem(K)});
+</script>{% endblock %}

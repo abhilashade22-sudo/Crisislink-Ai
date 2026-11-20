@@ -1,0 +1,12 @@
+{% extends "base.html" %}{% block body %}
+<h2>Admin dashboard</h2>
+<p>Total {{ stats.total }} | Awaiting review {{ stats.awaiting }} | Flagged for review {{ stats.review }} | Verified {{ stats.verified }} | Resolved {{ stats.resolved }}</p>
+<form class="mb-3"><label for="sf" class="me-2">Filter by status</label><select id="sf" name="status" onchange="this.form.submit()"><option value="">All</option>{% for s in statuses %}<option>{{s}}</option>{% endfor %}</select></form>
+<div class="table-responsive"><table class="table table-sm bg-white"><tr><th>ID</th><th>Category</th><th>Description</th><th>Status</th><th>Update</th></tr>
+{% for i in incs %}<tr><td>{{ i.public_id }}{% if i.needs_review %} (review){% endif %}</td><td>{{ i.category }}</td><td>{{ i.description[:90] }}</td><td>{{ i.status }}</td>
+<td><form method="post" action="/admin/incident/{{ i.id }}/status" class="d-flex gap-1" onsubmit="return confirm('Change status?')"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<select name="status" aria-label="New status">{% for s in statuses %}<option {{ 'selected' if s==i.status }}>{{s}}</option>{% endfor %}</select>
+<input name="note" placeholder="Note" aria-label="Note"><button class="btn btn-sm btn-primary">Save</button></form></td></tr>
+{% else %}<tr><td colspan="5">No reports yet.</td></tr>{% endfor %}</table></div>
+<h3 class="h5">Audit log</h3>{% for l in logs %}<div class="small">{{ l.created_at.strftime('%d %b %H:%M') }} {{ l.action }} {{ l.entity_id }} {{ l.details }}</div>{% endfor %}
+{% endblock %}

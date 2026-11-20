@@ -1,0 +1,5 @@
+{% extends "base.html" %}{% block body %}
+<h2>Safety information</h2><p>General guidance adapted from public sources. These are not live alerts. Always verify at the source.</p>
+{% for g in items %}<div class="card mb-2"><div class="card-body"><h3 class="h5">{{ g.title }} <span class="badge bg-secondary">{{ g.category }}</span></h3>
+<p>{{ g.content }}</p><small>Source: <a href="{{ g.source_url }}" target="_blank" rel="noopener">{{ g.source_name }}</a>. Reviewed {{ g.reviewed_at }}.</small></div></div>{% endfor %}
+{% endblock %}
